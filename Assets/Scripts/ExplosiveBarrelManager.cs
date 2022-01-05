@@ -15,9 +15,20 @@ public class ExplosiveBarrelManager : MonoBehaviour
     {
         foreach (var barrel in allTheBarrels)
         {
-            Handles.DrawAAPolyLine(transform.position, barrel.transform.position);
-
-
+            Vector3 managerPos = transform.position;
+            Vector3 barrelPos = barrel.transform.position;
+            float halfHeight = (managerPos.y - barrelPos.y) * .5f;
+            Vector3 offset = Vector3.up * halfHeight;
+            
+            Handles.DrawBezier(managerPos, 
+                barrelPos, 
+                managerPos - offset, 
+                barrelPos + offset, 
+                Color.white, 
+                EditorGUIUtility.whiteTexture,
+                1f);
+            
+            // Handles.DrawAAPolyLine(transform.position, barrel.transform.position);
         }
     }
     #endif
