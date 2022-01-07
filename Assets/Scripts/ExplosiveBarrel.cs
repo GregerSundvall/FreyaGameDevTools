@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 
 [ExecuteAlways]
@@ -33,17 +34,30 @@ public class ExplosiveBarrel : MonoBehaviour
         rnd.SetPropertyBlock(Mpb);
     }
 
+    private void Awake()
+    {
+        // For Runtime, run ApplyColor here.
+    }
+
     private void OnValidate()
     {
         ApplyColor();
     }
 
-    private void OnEnable() => ExplosiveBarrelManager.allTheBarrels.Add(this);
+    private void OnEnable()
+    {
+        ApplyColor(); // Might not be needed bc it's run in OnValidate.
+        ExplosiveBarrelManager.allTheBarrels.Add(this);
+    }
 
     private void OnDisable() => ExplosiveBarrelManager.allTheBarrels.Remove(this);
 
     private void OnDrawGizmosSelected()
     {
-        Gizmos.DrawWireSphere(transform.position, radius);
+        // Gizmos.DrawWireSphere(transform.position, radius);
+
+        Handles.color = color;
+        Handles.DrawWireDisc(transform.position, Vector3.up, radius);
+        Handles.color = Color.white; // Reset color to not apply it to every handle.
     }
 }
