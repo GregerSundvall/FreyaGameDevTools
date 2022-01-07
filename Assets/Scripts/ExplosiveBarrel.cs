@@ -23,7 +23,7 @@ public class ExplosiveBarrel : MonoBehaviour
         }
     }
 
-    void TryApplyColor()
+    public void TryApplyColor()
     {
         if (type == null)
         {

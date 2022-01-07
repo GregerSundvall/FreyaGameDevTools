@@ -14,4 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   radius: 1
   damage: -20
-  color: {r: 0, g: 1, b: 0.47390532, a: 1}
+  color: {r: 0, g: 1, b: 0.6218538, a: 1}
