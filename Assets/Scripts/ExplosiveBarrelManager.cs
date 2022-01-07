@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -13,8 +14,14 @@ public class ExplosiveBarrelManager : MonoBehaviour
     #if UNITY_EDITOR
     private void OnDrawGizmos()
     {
+        Handles.zTest = CompareFunction.LessEqual;
+        
         foreach (var barrel in allTheBarrels)
         {
+            if (barrel.type == null)
+            {
+                continue;
+            }
             Vector3 managerPos = transform.position;
             Vector3 barrelPos = barrel.transform.position;
             float halfHeight = (managerPos.y - barrelPos.y) * .5f;
@@ -24,7 +31,7 @@ public class ExplosiveBarrelManager : MonoBehaviour
                 barrelPos,
                 managerPos - offset,
                 barrelPos + offset,
-                barrel.color,
+                barrel.type.color,
                 EditorGUIUtility.whiteTexture,
                 1f);
             

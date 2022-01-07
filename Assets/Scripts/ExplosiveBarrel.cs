@@ -7,11 +7,7 @@ using UnityEngine;
 [ExecuteAlways]
 public class ExplosiveBarrel : MonoBehaviour
 {
-    [Range(1f, 8f)]
-    public float radius = 1;
-    
-    public float damage = 10;
-    public Color color = Color.red;
+    public BarrelType type;
 
     private MaterialPropertyBlock mpb;
 
@@ -27,10 +23,14 @@ public class ExplosiveBarrel : MonoBehaviour
         }
     }
 
-    void ApplyColor()
+    void TryApplyColor()
     {
+        if (type == null)
+        {
+            return;
+        }
         MeshRenderer rnd = GetComponent<MeshRenderer>();
-        Mpb.SetColor(shPropColor, color);
+        Mpb.SetColor(shPropColor, type.color);
         rnd.SetPropertyBlock(Mpb);
     }
 
@@ -41,23 +41,27 @@ public class ExplosiveBarrel : MonoBehaviour
 
     private void OnValidate()
     {
-        ApplyColor();
+        TryApplyColor();
     }
 
     private void OnEnable()
     {
-        ApplyColor(); // Might not be needed bc it's run in OnValidate.
+        TryApplyColor(); // Might not be needed bc it's run in OnValidate.
         ExplosiveBarrelManager.allTheBarrels.Add(this);
     }
 
     private void OnDisable() => ExplosiveBarrelManager.allTheBarrels.Remove(this);
 
-    private void OnDrawGizmosSelected()
+    private void OnDrawGizmos()
     {
+        if (type == null)
+        {
+            return;
+        }
         // Gizmos.DrawWireSphere(transform.position, radius);
 
-        Handles.color = color;
-        Handles.DrawWireDisc(transform.position, Vector3.up, radius);
+        Handles.color = type.color;
+        Handles.DrawWireDisc(transform.position, Vector3.up, type.radius);
         Handles.color = Color.white; // Reset color to not apply it to every handle.
     }
 }
