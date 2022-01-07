@@ -22,6 +22,12 @@ public class ExplosiveBarrel : MonoBehaviour
             return mpb;
         }
     }
+    
+    [ContextMenu("Do SomeThing")]
+    public void DoSomething()
+    {
+        
+    }
 
     public void TryApplyColor()
     {
