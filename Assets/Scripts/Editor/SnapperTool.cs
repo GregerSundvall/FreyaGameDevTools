@@ -35,7 +35,11 @@ public class SnapperTool : EditorWindow
         propGridSize = so.FindProperty("gridSize");
         propGridType = so.FindProperty("gridType");
         propAngularDivisions = so.FindProperty("angularDivisions");
-        
+
+        gridSize = EditorPrefs.GetFloat("Snapper_tool_gridSize", 1f);
+        gridType = (GridType)EditorPrefs.GetInt("Snapper_tool_gridType", 0);
+        angularDivisions = EditorPrefs.GetInt("Snapper_tool_angularDivisions", 24);
+
         Selection.selectionChanged += Repaint;
         SceneView.duringSceneGui += DuringSceneGUI; // SnapperTool is now drawing a line in scene.
     }
@@ -44,6 +48,9 @@ public class SnapperTool : EditorWindow
         Selection.selectionChanged -= Repaint;
         SceneView.duringSceneGui -= DuringSceneGUI;
 
+        EditorPrefs.SetFloat("Snapper_tool_gridSize", gridSize);
+        EditorPrefs.SetInt("Snapper_tool_gridType", (int)gridType);
+        EditorPrefs.SetInt("Snapper_tool_angularDivisions", angularDivisions);
     }
 
     // duringSceneGUI is the editors update which runs at like 100 fps
