@@ -15,5 +15,10 @@ public static class ExtensionMethods
     public static Vector3 Round(this Vector3 v, float size)
     {
         return (v / size).Round() * size;
+    }    
+    
+    public static float Round(this float f, float size)
+    {
+        return Mathf.Round(f / size) * size;
     }
 }
