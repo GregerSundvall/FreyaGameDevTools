@@ -5,6 +5,7 @@ using Unity.Mathematics;
 using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering;
 using Random = UnityEngine.Random;
 
 public class StuffSprinkler : EditorWindow
@@ -55,11 +56,22 @@ public class StuffSprinkler : EditorWindow
     {
         so.Update();
         EditorGUILayout.PropertyField(propRadius);
+        propRadius.floatValue = propRadius.floatValue.AtLeast(1);
         EditorGUILayout.PropertyField(propSpawnCount);
+        propSpawnCount.intValue = propSpawnCount.intValue.AtLeast(1);
+
         if(so.ApplyModifiedProperties())
         {
             // In if with repaintall bc may be low fps otherwise
+            GenerateRandomPoints();
             SceneView.RepaintAll();
+        }
+
+        // Deselect value box if you click somewhere else
+        if (Event.current.type == EventType.MouseDown && Event.current.button == 0)
+        {
+            GUI.FocusControl(null);
+            Repaint(); // Needed in some cases
         }
     }
 
@@ -71,6 +83,8 @@ public class StuffSprinkler : EditorWindow
 
     void DuringSceneGUI(SceneView sceneView)
     {
+        Handles.zTest = CompareFunction.LessEqual;
+        
         Transform camTf = sceneView.camera.transform;
 
         Ray ray = new Ray(camTf.position, camTf.forward);
@@ -82,11 +96,23 @@ public class StuffSprinkler : EditorWindow
             Vector3 hitTangent = Vector3.Cross(hitNormal, camTf.up).normalized;
             Vector3 hitBitangent = Vector3.Cross(hitNormal, hitTangent);
 
+            // Drawing points
             foreach (var p in randPoints)
             {
-                Vector3 worldPos = hit.point + (hitTangent * p.x + hitBitangent * p.y) * radius;
+                // Create ray for this point
+                Vector3 rayOrigin = hit.point + (hitTangent * p.x + hitBitangent * p.y) * radius;
+                rayOrigin += hitNormal * 2; // raycast offset (up)
+                Vector3 rayDirection = -hitNormal;
                 
-                DrawSphere(worldPos);
+                // Raycast to find point on surface
+                Ray ptRay = new Ray(rayOrigin, rayDirection);
+                
+                if (Physics.Raycast(ptRay, out RaycastHit ptHit))
+                {
+                    // Draw sphere and normal on surface
+                    DrawSphere(ptHit.point);
+                    Handles.DrawAAPolyLine(ptHit.point, ptHit.point + ptHit.normal);
+                }
             }
             
             Handles.color = Color.red;
