@@ -87,8 +87,30 @@ public class StuffSprinkler : EditorWindow
         
         Transform camTf = sceneView.camera.transform;
 
-        Ray ray = new Ray(camTf.position, camTf.forward);
+        // Ray from mouse pos
+        if (Event.current.type == EventType.MouseMove) // Make sure it repaints on mouse move.
+        {
+            sceneView.Repaint();
+        }
 
+        bool holdingAlt = (Event.current.modifiers & EventModifiers.Alt) != 0;
+        
+        // change radius
+        if (Event.current.type == EventType.ScrollWheel && holdingAlt == false)
+        {
+            float scrollDirection = Mathf.Sign(Event.current.delta.y);
+            so.Update();
+            propRadius.floatValue *= 1f + scrollDirection * 0.05f;
+            so.ApplyModifiedProperties();
+            Repaint(); // Update editor window
+            Event.current.Use(); // Consume event, dont let it get picked up by anything else (like zoom)
+        }
+        
+        Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
+
+        // Ray from camera
+        //Ray ray = new Ray(camTf.position, camTf.forward);
+        
         if (Physics.Raycast(ray, out RaycastHit hit))
         {
             // Setting up tangent space
