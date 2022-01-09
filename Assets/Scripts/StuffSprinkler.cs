@@ -12,13 +12,17 @@ public class StuffSprinkler : EditorWindow
 {
     [MenuItem("Tools/StuffSprinkler")]
     public static void OpenSprinkler() => GetWindow<StuffSprinkler>();
+    
+    float TAU = Mathf.PI * 2;
 
     public float radius = 2f;
     public int spawnCount = 9;
+    public GameObject spawnPrefab;
 
     private SerializedObject so;
     private SerializedProperty propRadius;
     private SerializedProperty propSpawnCount;
+    private SerializedProperty propSpawnPrefab;
 
     private Vector2[] randPoints;
     
@@ -29,6 +33,7 @@ public class StuffSprinkler : EditorWindow
 
         propRadius = so.FindProperty("radius");
         propSpawnCount = so.FindProperty("spawnCount");
+        propSpawnPrefab = so.FindProperty("spawnPrefab");
         
         SceneView.duringSceneGui += DuringSceneGUI;
         
@@ -59,6 +64,8 @@ public class StuffSprinkler : EditorWindow
         propRadius.floatValue = propRadius.floatValue.AtLeast(1);
         EditorGUILayout.PropertyField(propSpawnCount);
         propSpawnCount.intValue = propSpawnCount.intValue.AtLeast(1);
+        EditorGUILayout.PropertyField(propSpawnPrefab);
+        
 
         if(so.ApplyModifiedProperties())
         {
@@ -79,6 +86,26 @@ public class StuffSprinkler : EditorWindow
     void DrawSphere(Vector3 pos)
     {
         Handles.SphereHandleCap(-1, pos, quaternion.identity, 0.1f, EventType.Repaint);
+    }
+    
+    void TrySpawnObjects(List<RaycastHit> hitPts)
+    {
+        if (spawnPrefab == null)
+        {
+            return;
+        }
+
+        foreach (var hit in hitPts)
+        {
+            //spawn prefab
+            GameObject spawnedThing = (GameObject)PrefabUtility.InstantiatePrefab(spawnPrefab);
+            Undo.RegisterCreatedObjectUndo(spawnedThing, "Spawn objects");
+            spawnedThing.transform.position = hit.point;
+            Quaternion rot = Quaternion.LookRotation(hit.normal) * Quaternion.Euler(90f,0f,0f);
+            spawnedThing.transform.rotation = rot;
+            
+        }
+        
     }
 
     void DuringSceneGUI(SceneView sceneView)
@@ -106,6 +133,11 @@ public class StuffSprinkler : EditorWindow
             Event.current.Use(); // Consume event, dont let it get picked up by anything else (like zoom)
         }
         
+        
+       
+        
+
+        
         Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
 
         // Ray from camera
@@ -118,24 +150,44 @@ public class StuffSprinkler : EditorWindow
             Vector3 hitTangent = Vector3.Cross(hitNormal, camTf.up).normalized;
             Vector3 hitBitangent = Vector3.Cross(hitNormal, hitTangent);
 
+            Ray GetTangentRay(Vector2 tangentSpacePos)
+            {
+                Vector3 rayOrigin = hit.point + (hitTangent * tangentSpacePos.x + hitBitangent * tangentSpacePos.y) * radius;
+                rayOrigin += hitNormal * 2; // raycast offset (up)
+                Vector3 rayDirection = -hitNormal;
+                return new Ray(rayOrigin, rayDirection);
+            }
+
+            List<RaycastHit> hitPts = new List<RaycastHit>();
+            
+
+
+
             // Drawing points
             foreach (var p in randPoints)
             {
                 // Create ray for this point
-                Vector3 rayOrigin = hit.point + (hitTangent * p.x + hitBitangent * p.y) * radius;
-                rayOrigin += hitNormal * 2; // raycast offset (up)
-                Vector3 rayDirection = -hitNormal;
-                
+                Ray ptRay = GetTangentRay(p);
                 // Raycast to find point on surface
-                Ray ptRay = new Ray(rayOrigin, rayDirection);
-                
                 if (Physics.Raycast(ptRay, out RaycastHit ptHit))
                 {
+                    hitPts.Add(ptHit);
                     // Draw sphere and normal on surface
                     DrawSphere(ptHit.point);
                     Handles.DrawAAPolyLine(ptHit.point, ptHit.point + ptHit.normal);
                 }
             }
+            
+
+            
+            // spawn on Press
+            if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Space)
+            {
+                Debug.Log(Event.current.type);
+                Debug.Log("Spawn");
+                TrySpawnObjects(hitPts);
+            }
+            
             
             Handles.color = Color.red;
             Handles.DrawAAPolyLine(10, hit.point, hit.point + hitTangent);
@@ -144,10 +196,30 @@ public class StuffSprinkler : EditorWindow
             Handles.color = Color.blue;
             Handles.DrawAAPolyLine(10, hit.point, hit.point + hitNormal);
             Handles.color = Color.white;
+            Handles.DrawAAPolyLine(6, hit.point, hit.point + hitNormal);
+
+            // Draw circle adapted to terrain
+            const int circleDetail = 128;
+            Vector3[] ringPoints = new Vector3[circleDetail];
+            for (int i = 0; i < circleDetail; i++)
+            {
+                float t = i / (float) circleDetail - 1;
+                float angRad = t * TAU;
+                Vector2 dir = new Vector2(Mathf.Cos(angRad), Mathf.Sin(angRad));
+                Ray r = GetTangentRay(dir);
+                if (Physics.Raycast(r, out RaycastHit cHit))
+                {
+                    ringPoints[i] = cHit.point + cHit.normal * 0.02f;
+                }
+                else
+                {
+                    ringPoints[i] = r.origin;
+                }
+            }
+            Handles.DrawAAPolyLine(ringPoints);
             
-            Handles.DrawWireDisc(hit.point, hit.normal, radius);
+            // Handles.DrawWireDisc(hit.point, hit.normal, radius);
         }
-        
         
         
         
