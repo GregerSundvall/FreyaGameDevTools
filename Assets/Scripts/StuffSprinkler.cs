@@ -18,11 +18,13 @@ public class StuffSprinkler : EditorWindow
     public float radius = 2f;
     public int spawnCount = 9;
     public GameObject spawnPrefab;
+    public Material previewMaterial;
 
     private SerializedObject so;
     private SerializedProperty propRadius;
     private SerializedProperty propSpawnCount;
     private SerializedProperty propSpawnPrefab;
+    private SerializedProperty propPreviewMaterial;
 
     private Vector2[] randPoints;
     
@@ -34,6 +36,7 @@ public class StuffSprinkler : EditorWindow
         propRadius = so.FindProperty("radius");
         propSpawnCount = so.FindProperty("spawnCount");
         propSpawnPrefab = so.FindProperty("spawnPrefab");
+        propPreviewMaterial = so.FindProperty("previewMaterial");
         
         SceneView.duringSceneGui += DuringSceneGUI;
         
@@ -65,6 +68,7 @@ public class StuffSprinkler : EditorWindow
         EditorGUILayout.PropertyField(propSpawnCount);
         propSpawnCount.intValue = propSpawnCount.intValue.AtLeast(1);
         EditorGUILayout.PropertyField(propSpawnPrefab);
+        EditorGUILayout.PropertyField(propPreviewMaterial);
         
 
         if(so.ApplyModifiedProperties())
@@ -83,29 +87,25 @@ public class StuffSprinkler : EditorWindow
     }
 
 
-    void DrawSphere(Vector3 pos)
-    {
+    void DrawSphere(Vector3 pos) {
         Handles.SphereHandleCap(-1, pos, quaternion.identity, 0.1f, EventType.Repaint);
     }
     
-    void TrySpawnObjects(List<RaycastHit> hitPts)
+    void TrySpawnObjects(List<Pose> poses)
     {
         if (spawnPrefab == null)
         {
             return;
         }
 
-        foreach (var hit in hitPts)
+        foreach (var pose in poses)
         {
             //spawn prefab
             GameObject spawnedThing = (GameObject)PrefabUtility.InstantiatePrefab(spawnPrefab);
             Undo.RegisterCreatedObjectUndo(spawnedThing, "Spawn objects");
-            spawnedThing.transform.position = hit.point;
-            Quaternion rot = Quaternion.LookRotation(hit.normal) * Quaternion.Euler(90f,0f,0f);
-            spawnedThing.transform.rotation = rot;
-            
+            spawnedThing.transform.position = pose.position;
         }
-        
+        GenerateRandomPoints(); // Generate new preliminary points
     }
 
     void DuringSceneGUI(SceneView sceneView)
@@ -132,12 +132,7 @@ public class StuffSprinkler : EditorWindow
             Repaint(); // Update editor window
             Event.current.Use(); // Consume event, dont let it get picked up by anything else (like zoom)
         }
-        
-        
-       
-        
 
-        
         Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
 
         // Ray from camera
@@ -158,10 +153,8 @@ public class StuffSprinkler : EditorWindow
                 return new Ray(rayOrigin, rayDirection);
             }
 
-            List<RaycastHit> hitPts = new List<RaycastHit>();
+            List<Pose> hitPoses = new List<Pose>();
             
-
-
 
             // Drawing points
             foreach (var p in randPoints)
@@ -171,10 +164,31 @@ public class StuffSprinkler : EditorWindow
                 // Raycast to find point on surface
                 if (Physics.Raycast(ptRay, out RaycastHit ptHit))
                 {
-                    hitPts.Add(ptHit);
+                    // Calculate rotation assign to pose together with position.
+                    Quaternion randomRotation = quaternion.Euler(0, 0, Random.value * 360);
+                    Quaternion rot = Quaternion.LookRotation(ptHit.normal) * (randomRotation * Quaternion.Euler(90f,0f,0f));
+                    Pose pose = new Pose(ptHit.point, rot);
+                    hitPoses.Add(pose);
+                    
                     // Draw sphere and normal on surface
                     DrawSphere(ptHit.point);
                     Handles.DrawAAPolyLine(ptHit.point, ptHit.point + ptHit.normal);
+                    
+                    //Mesh
+                    MeshFilter[] filters = spawnPrefab.GetComponentsInChildren<MeshFilter>();
+                    foreach (var filter in filters)
+                    {
+                        Mesh mesh = filter.sharedMesh;
+                        Material mat = filter.GetComponent<MeshRenderer>().sharedMaterial;
+                        mat.SetPass(0);
+                        Graphics.DrawMeshNow(mesh, pose.position, pose.rotation);
+                    }
+                    
+                    // Mesh mesh = spawnPrefab.GetComponent<MeshFilter>().sharedMesh;
+                    // Material mat = spawnPrefab.GetComponent<MeshRenderer>().sharedMaterial;
+                    
+                    
+                    
                 }
             }
             
@@ -185,7 +199,7 @@ public class StuffSprinkler : EditorWindow
             {
                 Debug.Log(Event.current.type);
                 Debug.Log("Spawn");
-                TrySpawnObjects(hitPts);
+                TrySpawnObjects(hitPoses);
             }
             
             
